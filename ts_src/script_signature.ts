@@ -33,6 +33,12 @@ export function decode(buffer: Buffer): ScriptSignature {
   if (hashTypeMod <= 0 || hashTypeMod >= 4)
     throw new Error('Invalid hashType ' + hashType);
 
+  if (buffer.length === 65) {
+    // Assume schnorr signature
+    const signature = buffer.slice(0, -1);
+    return { signature, hashType };
+  }
+
   const decoded = bip66.decode(buffer.slice(0, -1));
   const r = fromDER(decoded.r);
   const s = fromDER(decoded.s);
@@ -41,7 +47,11 @@ export function decode(buffer: Buffer): ScriptSignature {
   return { signature, hashType };
 }
 
-export function encode(signature: Buffer, hashType: number): Buffer {
+export function encode(
+  signature: Buffer,
+  hashType: number,
+  schnorr?: boolean,
+): Buffer {
   typeforce(
     {
       signature: types.BufferN(64),
@@ -56,6 +66,10 @@ export function encode(signature: Buffer, hashType: number): Buffer {
 
   const hashTypeBuffer = Buffer.allocUnsafe(1);
   hashTypeBuffer.writeUInt8(hashType, 0);
+
+  if (schnorr === true) {
+    return Buffer.concat([signature, hashTypeBuffer]);
+  }
 
   const r = toDER(signature.slice(0, 32));
   const s = toDER(signature.slice(32, 64));

@@ -59,6 +59,7 @@ class TransactionBuilder {
     this.__TX = new transaction_1.Transaction();
     this.__TX.version = 2;
     this.__USE_LOW_R = false;
+    this.__USE_SCHNORR = false;
     console.warn(
       'Deprecation Warning: TransactionBuilder will be removed in the future. ' +
         '(v6.x.x or later) Please use the Psbt class instead. Examples of usage ' +
@@ -117,6 +118,12 @@ class TransactionBuilder {
     }
     this.__USE_LOW_R = setting;
     return setting;
+  }
+  setSchnorr(enable) {
+    if (typeof enable === 'undefined') {
+      enable = true;
+    }
+    this.__USE_SCHNORR = enable;
   }
   setLockTime(locktime) {
     typeforce(types.UInt32, locktime);
@@ -199,6 +206,7 @@ class TransactionBuilder {
         witnessValue,
         witnessScript,
         this.__USE_LOW_R,
+        this.__USE_SCHNORR,
       ),
     );
   }
@@ -1006,6 +1014,7 @@ function trySign({
   signatureHash,
   hashType,
   useLowR,
+  useSchnorr,
 }) {
   // enforce in order signing of public keys
   let signed = false;
@@ -1018,8 +1027,12 @@ function trySign({
         'BIP143 rejects uncompressed public keys in P2WPKH or P2WSH',
       );
     }
-    const signature = keyPair.sign(signatureHash, useLowR);
-    input.signatures[i] = bscript.signature.encode(signature, hashType);
+    const signature = keyPair.sign(signatureHash, useLowR, useSchnorr);
+    input.signatures[i] = bscript.signature.encode(
+      signature,
+      hashType,
+      useSchnorr,
+    );
     signed = true;
   }
   if (!signed) throw new Error('Key pair cannot sign for this input');
@@ -1037,6 +1050,7 @@ function getSigningData(
   witnessValue,
   witnessScript,
   useLowR,
+  useSchnorr,
 ) {
   let vin;
   if (typeof signParams === 'number') {
@@ -1135,5 +1149,6 @@ function getSigningData(
     signatureHash,
     hashType,
     useLowR: !!useLowR,
+    useSchnorr: !!useSchnorr,
   };
 }

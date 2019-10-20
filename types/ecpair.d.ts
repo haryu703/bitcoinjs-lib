@@ -8,13 +8,13 @@ interface ECPairOptions {
 export interface Signer {
     publicKey: Buffer;
     network?: any;
-    sign(hash: Buffer, lowR?: boolean): Buffer;
+    sign(hash: Buffer, lowR?: boolean, schnorr?: boolean): Buffer;
     getPublicKey?(): Buffer;
 }
 export interface SignerAsync {
     publicKey: Buffer;
     network?: any;
-    sign(hash: Buffer, lowR?: boolean): Promise<Buffer>;
+    sign(hash: Buffer, lowR?: boolean, schnorr?: boolean): Promise<Buffer>;
     getPublicKey?(): Buffer;
 }
 export interface ECPairInterface extends Signer {
@@ -23,7 +23,7 @@ export interface ECPairInterface extends Signer {
     lowR: boolean;
     privateKey?: Buffer;
     toWIF(): string;
-    verify(hash: Buffer, signature: Buffer): boolean;
+    verify(hash: Buffer, signature: Buffer, schnorr?: boolean): boolean;
 }
 declare class ECPair implements ECPairInterface {
     private __D?;
@@ -35,8 +35,8 @@ declare class ECPair implements ECPairInterface {
     readonly privateKey: Buffer | undefined;
     readonly publicKey: Buffer;
     toWIF(): string;
-    sign(hash: Buffer, lowR?: boolean): Buffer;
-    verify(hash: Buffer, signature: Buffer): boolean;
+    sign(hash: Buffer, lowR?: boolean, schnorr?: boolean): Buffer;
+    verify(hash: Buffer, signature: Buffer, schnorr?: boolean): boolean;
 }
 declare function fromPrivateKey(buffer: Buffer, options?: ECPairOptions): ECPair;
 declare function fromPublicKey(buffer: Buffer, options?: ECPairOptions): ECPair;

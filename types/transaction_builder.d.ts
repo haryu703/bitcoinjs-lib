@@ -21,10 +21,12 @@ export declare class TransactionBuilder {
     private __BITCOINGOLD;
     private __TX;
     private __USE_LOW_R;
+    private __USE_SCHNORR;
     constructor(network?: Network, maximumFeeRate?: number);
     enableBitcoinCash(enable?: boolean): void;
     enableBitcoinGold(enable?: boolean): void;
     setLowR(setting?: boolean): boolean;
+    setSchnorr(enable?: boolean): void;
     setLockTime(locktime: number): void;
     setVersion(version: number): void;
     addInput(txHash: Buffer | string | Transaction, vout: number, sequence?: number, prevOutScript?: Buffer): number;

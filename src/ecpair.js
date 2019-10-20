@@ -6,6 +6,8 @@ const ecc = require('tiny-secp256k1');
 const randomBytes = require('randombytes');
 const typeforce = require('typeforce');
 const wif = require('wif');
+const BigInteger = require('bigi');
+const bipSchnorr = require('bip-schnorr');
 const isOptions = typeforce.maybe(
   typeforce.compile({
     compressed: types.maybe(types.Boolean),
@@ -34,8 +36,12 @@ class ECPair {
     if (!this.__D) throw new Error('Missing private key');
     return wif.encode(this.network.wif, this.__D, this.compressed);
   }
-  sign(hash, lowR) {
+  sign(hash, lowR, schnorr) {
+    if (lowR && schnorr) throw new Error('Invalid args');
     if (!this.__D) throw new Error('Missing private key');
+    if (schnorr === true) {
+      return bipSchnorr.sign(BigInteger.fromBuffer(this.__D), hash);
+    }
     if (lowR === undefined) lowR = this.lowR;
     if (lowR === false) {
       return ecc.sign(hash, this.__D);
@@ -53,8 +59,17 @@ class ECPair {
       return sig;
     }
   }
-  verify(hash, signature) {
-    return ecc.verify(hash, this.publicKey, signature);
+  verify(hash, signature, schnorr) {
+    if (schnorr === true) {
+      try {
+        bipSchnorr.verify(this.publicKey, hash, signature);
+        return true;
+      } catch (_) {
+        return false;
+      }
+    } else {
+      return ecc.verify(hash, this.publicKey, signature);
+    }
   }
 }
 function fromPrivateKey(buffer, options) {

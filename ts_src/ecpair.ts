@@ -5,6 +5,8 @@ const ecc = require('tiny-secp256k1');
 const randomBytes = require('randombytes');
 const typeforce = require('typeforce');
 const wif = require('wif');
+const BigInteger = require('bigi');
+const bipSchnorr = require('bip-schnorr');
 
 const isOptions = typeforce.maybe(
   typeforce.compile({
@@ -22,14 +24,14 @@ interface ECPairOptions {
 export interface Signer {
   publicKey: Buffer;
   network?: any;
-  sign(hash: Buffer, lowR?: boolean): Buffer;
+  sign(hash: Buffer, lowR?: boolean, schnorr?: boolean): Buffer;
   getPublicKey?(): Buffer;
 }
 
 export interface SignerAsync {
   publicKey: Buffer;
   network?: any;
-  sign(hash: Buffer, lowR?: boolean): Promise<Buffer>;
+  sign(hash: Buffer, lowR?: boolean, schnorr?: boolean): Promise<Buffer>;
   getPublicKey?(): Buffer;
 }
 
@@ -39,7 +41,7 @@ export interface ECPairInterface extends Signer {
   lowR: boolean;
   privateKey?: Buffer;
   toWIF(): string;
-  verify(hash: Buffer, signature: Buffer): boolean;
+  verify(hash: Buffer, signature: Buffer, schnorr?: boolean): boolean;
 }
 
 class ECPair implements ECPairInterface {
@@ -76,8 +78,12 @@ class ECPair implements ECPairInterface {
     return wif.encode(this.network.wif, this.__D, this.compressed);
   }
 
-  sign(hash: Buffer, lowR?: boolean): Buffer {
+  sign(hash: Buffer, lowR?: boolean, schnorr?: boolean): Buffer {
+    if (lowR && schnorr) throw new Error('Invalid args');
     if (!this.__D) throw new Error('Missing private key');
+    if (schnorr === true) {
+      return bipSchnorr.sign(BigInteger.fromBuffer(this.__D), hash);
+    }
     if (lowR === undefined) lowR = this.lowR;
     if (lowR === false) {
       return ecc.sign(hash, this.__D);
@@ -96,8 +102,17 @@ class ECPair implements ECPairInterface {
     }
   }
 
-  verify(hash: Buffer, signature: Buffer): boolean {
-    return ecc.verify(hash, this.publicKey, signature);
+  verify(hash: Buffer, signature: Buffer, schnorr?: boolean): boolean {
+    if (schnorr === true) {
+      try {
+        bipSchnorr.verify(this.publicKey, hash, signature);
+        return true;
+      } catch (_) {
+        return false;
+      }
+    } else {
+      return ecc.verify(hash, this.publicKey, signature);
+    }
   }
 }
 

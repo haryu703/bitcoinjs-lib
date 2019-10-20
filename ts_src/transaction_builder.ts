@@ -146,6 +146,7 @@ export class TransactionBuilder {
   private __BITCOINGOLD: boolean;
   private __TX: Transaction;
   private __USE_LOW_R: boolean;
+  private __USE_SCHNORR: boolean;
 
   // WARNING: maximumFeeRate is __NOT__ to be relied on,
   //          it's just another potential safety mechanism (safety in-depth)
@@ -160,6 +161,7 @@ export class TransactionBuilder {
     this.__TX = new Transaction();
     this.__TX.version = 2;
     this.__USE_LOW_R = false;
+    this.__USE_SCHNORR = false;
     console.warn(
       'Deprecation Warning: TransactionBuilder will be removed in the future. ' +
         '(v6.x.x or later) Please use the Psbt class instead. Examples of usage ' +
@@ -192,6 +194,14 @@ export class TransactionBuilder {
     }
     this.__USE_LOW_R = setting;
     return setting;
+  }
+
+  setSchnorr(enable?: boolean): void {
+    if (typeof enable === 'undefined') {
+      enable = true;
+    }
+
+    this.__USE_SCHNORR = enable;
   }
 
   setLockTime(locktime: number): void {
@@ -297,6 +307,7 @@ export class TransactionBuilder {
         witnessValue,
         witnessScript,
         this.__USE_LOW_R,
+        this.__USE_SCHNORR,
       ),
     );
   }
@@ -1241,6 +1252,7 @@ function trySign({
   signatureHash,
   hashType,
   useLowR,
+  useSchnorr,
 }: SigningData): void {
   // enforce in order signing of public keys
   let signed = false;
@@ -1255,8 +1267,12 @@ function trySign({
       );
     }
 
-    const signature = keyPair.sign(signatureHash, useLowR);
-    input.signatures![i] = bscript.signature.encode(signature, hashType);
+    const signature = keyPair.sign(signatureHash, useLowR, useSchnorr);
+    input.signatures![i] = bscript.signature.encode(
+      signature,
+      hashType,
+      useSchnorr,
+    );
     signed = true;
   }
 
@@ -1270,6 +1286,7 @@ interface SigningData {
   signatureHash: Buffer;
   hashType: number;
   useLowR: boolean;
+  useSchnorr: boolean;
 }
 
 type HashTypeCheck = (hashType: number) => boolean;
@@ -1292,6 +1309,7 @@ function getSigningData(
   witnessValue?: number,
   witnessScript?: Buffer,
   useLowR?: boolean,
+  useSchnorr?: boolean,
 ): SigningData {
   let vin: number;
   if (typeof signParams === 'number') {
@@ -1399,5 +1417,6 @@ function getSigningData(
     signatureHash,
     hashType,
     useLowR: !!useLowR,
+    useSchnorr: !!useSchnorr,
   };
 }
